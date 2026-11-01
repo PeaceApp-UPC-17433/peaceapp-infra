@@ -1,0 +1,13 @@
+# Copiar a terraform.tfvars (ignorado por git) y completar valores no sensibles.
+# La contrasena de PostgreSQL NUNCA va aqui: exportarla como variable de entorno
+# antes de correr terraform:
+#   $env:TF_VAR_postgres_admin_password = "<password>"   (PowerShell)
+#   export TF_VAR_postgres_admin_password="<password>"    (bash)
+
+resource_group_name  = "rg-peaceapp"
+location              = "North Central US"
+aks_cluster_name      = "aks-peaceapp"
+aks_node_count        = 1
+aks_node_vm_size      = "Standard_D2ads_v7"
+postgres_server_name  = "peaceapp-pg-17433"
+postgres_admin_login  = "peaceapp_admin"
