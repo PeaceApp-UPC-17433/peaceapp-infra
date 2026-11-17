@@ -1,0 +1,4 @@
+# Excepciones de Trivy config aceptadas temporalmente (informe, seccion 3.3.2).
+# AVD-AZU-0041: la API de AKS no limita IPs. Los runners de GitHub Actions no tienen IP fija;
+# se resuelve en el Sprint 7 con authorized_ip_ranges o un cluster privado. Vence el 22/11/2026.
+AVD-AZU-0041 exp:2026-11-22
