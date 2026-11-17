@@ -1,0 +1,22 @@
+# Logging centralizado: Loki (almacen de logs) + Promtail (DaemonSet que recolecta los logs de todos los pods).
+# Instalacion:
+#   helm upgrade --install loki grafana/loki-stack -n monitoring -f loki-stack-values.yaml
+loki:
+  enabled: true
+  isDefault: false
+  persistence:
+    enabled: false
+  config:
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 168h
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+promtail:
+  enabled: true
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+grafana:
+  enabled: false   # se usa el Grafana de kube-prometheus-stack (datasource Loki)
+prometheus:
+  enabled: false

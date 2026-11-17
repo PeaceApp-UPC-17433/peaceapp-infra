@@ -1,0 +1,72 @@
+# kube-prometheus-stack (Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics)
+# Dimensionado para el nodo unico Standard_D2ads_v7 (2 vCPU, 8 GB) de aks-peaceapp.
+# Instalacion:
+#   helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace -f kube-prometheus-stack-values.yaml \
+#     --set grafana.adminPassword="$GRAFANA_ADMIN_PASSWORD"
+
+# AKS administra el plano de control: estos componentes no se pueden raspar y generarian alertas falsas.
+kubeEtcd: { enabled: false }
+kubeControllerManager: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeProxy: { enabled: false }
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    scrapeInterval: 15s
+    # Descubre ServiceMonitor y PrometheusRule de cualquier namespace (peaceapp incluido)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { memory: 1536Mi }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 20m, memory: 64Mi }
+  config:
+    route:
+      receiver: 'null'
+      group_by: ['alertname', 'application']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - receiver: peaceapp-oncall
+          matchers: ['team="peaceapp"']
+    receivers:
+      - name: 'null'
+      # Canal del equipo: se reemplaza por el webhook real (Slack/Teams/Discord) al configurarlo.
+      - name: peaceapp-oncall
+
+grafana:
+  defaultDashboardsTimezone: America/Lima
+  # Grafana es ClusterIP (solo port-forward); el rol anonimo es de solo lectura para capturas y demos.
+  grafana.ini:
+    auth.anonymous:
+      enabled: true
+      org_role: Viewer
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      url: http://loki.monitoring.svc.cluster.local:3100
+      access: proxy
+
+kube-state-metrics:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
