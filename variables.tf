@@ -49,7 +49,7 @@ variable "postgres_admin_password" {
 variable "postgres_database_names" {
   description = "Bases de datos a crear, una por microservicio desplegado."
   type        = list(string)
-  default     = ["identity_db", "incident_db"]
+  default     = ["identity_db", "incident_db", "trust_db"]
 }
 
 variable "tags" {
@@ -60,4 +60,15 @@ variable "tags" {
     environment = "pruebas"
     managed_by  = "terraform"
   }
+}
+
+variable "postgres_location" {
+  description = "Region del servidor PostgreSQL. El servidor real peaceapp-pg-17433 se creo en Brazil South (Evidencia 10), mientras que el cluster AKS quedo en North Central US por la cuota de vCPU."
+  type        = string
+  default     = "Brazil South"
+}
+
+variable "subscription_id" {
+  description = "Id de la suscripcion Azure for Students; se usa solo para importar los recursos existentes (imports.tf). Pasar por TF_VAR_subscription_id."
+  type        = string
 }
