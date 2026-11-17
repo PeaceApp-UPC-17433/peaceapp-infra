@@ -1,0 +1,23 @@
+# Prometheus descubre los tres microservicios por la etiqueta "tier: backend" de sus Services
+# y raspa /actuator/prometheus cada 15 s por el puerto con nombre "http".
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: peaceapp-backend
+  namespace: peaceapp
+  labels:
+    team: peaceapp
+spec:
+  selector:
+    matchLabels:
+      tier: backend
+  namespaceSelector:
+    matchNames: [peaceapp]
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+      scrapeTimeout: 10s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: service

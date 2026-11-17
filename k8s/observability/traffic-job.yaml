@@ -1,0 +1,65 @@
+# Generador de trafico sintetico (seccion 4.3): recorre los flujos principales de PeaceApp dentro del cluster
+# e incluye errores esperados del cliente (400, 401, 404, 413) para validar que los SLIs solo cuentan 5xx.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traffic-script
+  namespace: peaceapp
+data:
+  traffic.sh: |
+    #!/bin/sh
+    ID=http://identity-service.peaceapp.svc.cluster.local
+    INC=http://incident-service.peaceapp.svc.cluster.local
+    TR=http://trust-service.peaceapp.svc.cluster.local
+    J='Content-Type: application/json'
+    END=$(( $(date +%s) + ${DURATION_SECONDS:-900} ))
+    i=0
+    while [ "$(date +%s)" -lt "$END" ]; do
+      i=$((i+1)); email="carga$(date +%s)$i@peaceapp.pe"
+      curl -s -o /dev/null -X POST $ID/api/v1/auth/register -H "$J" -d "{\"email\":\"$email\",\"password\":\"Clave12345\"}"
+      token=$(curl -s -X POST $ID/api/v1/auth/login -H "$J" -d "{\"email\":\"$email\",\"password\":\"Clave12345\"}" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+      A="Authorization: Bearer $token"
+      curl -s -o /dev/null -X POST $ID/api/v1/auth/login -H "$J" -d "{\"email\":\"$email\",\"password\":\"incorrecta\"}"
+      for t in ROBO HURTO ACCIDENTE_TRANSITO; do
+        curl -s -o /dev/null -X POST $INC/api/v1/incidents -H "$J" -H "$A" \
+          -d "{\"type\":\"$t\",\"description\":\"Prueba de carga $i\",\"latitude\":-12.0$i,\"longitude\":-77.04,\"anonymous\":false}"
+      done
+      curl -s -o /dev/null -X POST $INC/api/v1/incidents -H "$J" -H "$A" -d '{"type":"ROBO","description":"sin coordenadas"}'
+      curl -s -o /dev/null -X POST $INC/api/v1/incidents -H "$J" -H "$A" \
+        -d '{"type":"ROBO","latitude":-12.05,"longitude":-77.03,"anonymous":false,"evidences":[{"mediaType":"VIDEO","url":"https://example.org/v.mp4","sizeBytes":27262976}]}'
+      curl -s -o /dev/null $INC/api/v1/incidents/mine -H "$A"
+      curl -s -o /dev/null $INC/api/v1/incidents/$(cat /proc/sys/kernel/random/uuid) -H "$A"
+      curl -s -o /dev/null -X POST $TR/api/v1/trust/evaluate -H "$J" -H "$A" \
+        -d "{\"incidentId\":\"$(cat /proc/sys/kernel/random/uuid)\",\"authorId\":\"$(cat /proc/sys/kernel/random/uuid)\",\"type\":\"ROBO\",\"latitude\":-12.04,\"longitude\":-77.04,\"occurredAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"description\":\"carga\",\"hasEvidence\":false,\"authorReputationScore\":50}"
+      curl -s -o /dev/null $TR/api/v1/trust/moderation-queue -H "$A"
+      sleep 1
+    done
+    echo "iteraciones: $i"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: traffic-generator
+  namespace: peaceapp
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: traffic
+          image: curlimages/curl:8.11.1
+          command: ["/bin/sh", "/scripts/traffic.sh"]
+          env:
+            - name: DURATION_SECONDS
+              value: "1200"
+          resources:
+            requests: { cpu: 20m, memory: 16Mi }
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: traffic-script

@@ -1,0 +1,171 @@
+# Microservicios de PeaceApp con etiquetas y puerto con nombre para Prometheus (4.3).
+# Las etiquetas de imagen se fijan en el despliegue: kubectl -n peaceapp set image deployment/<svc> <svc>=ghcr.io/peaceapp-upc-17433/<svc>:<version>
+# Los Secrets se crean con kubectl (ver DESPLIEGUE.md); este archivo no contiene secretos.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service
+  namespace: peaceapp
+  labels: { app: identity-service, tier: backend }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: identity-service }
+  template:
+    metadata:
+      labels: { app: identity-service, tier: backend }
+    spec:
+      containers:
+        - name: identity-service
+          image: ghcr.io/peaceapp-upc-17433/identity-service:develop
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            - name: DB_URL
+              valueFrom: { secretKeyRef: { name: identity-secrets, key: DB_URL } }
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: identity-secrets, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: identity-secrets, key: DB_PASSWORD } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: identity-secrets, key: JWT_SECRET } }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: peaceapp
+  labels: { app: identity-service, tier: backend }
+spec:
+  type: LoadBalancer
+  selector: { app: identity-service }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incident-service
+  namespace: peaceapp
+  labels: { app: incident-service, tier: backend }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: incident-service }
+  template:
+    metadata:
+      labels: { app: incident-service, tier: backend }
+    spec:
+      containers:
+        - name: incident-service
+          image: ghcr.io/peaceapp-upc-17433/incident-service:develop
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8082
+          env:
+            - name: DB_URL
+              valueFrom: { secretKeyRef: { name: incident-secrets, key: DB_URL } }
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: incident-secrets, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: incident-secrets, key: DB_PASSWORD } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: incident-secrets, key: JWT_SECRET } }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: incident-service
+  namespace: peaceapp
+  labels: { app: incident-service, tier: backend }
+spec:
+  type: LoadBalancer
+  selector: { app: incident-service }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trust-service
+  namespace: peaceapp
+  labels: { app: trust-service, tier: backend }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: trust-service }
+  template:
+    metadata:
+      labels: { app: trust-service, tier: backend }
+    spec:
+      containers:
+        - name: trust-service
+          image: ghcr.io/peaceapp-upc-17433/trust-service:develop
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8083
+          env:
+            - name: DB_URL
+              valueFrom: { secretKeyRef: { name: trust-secrets, key: DB_URL } }
+            - name: DB_USERNAME
+              valueFrom: { secretKeyRef: { name: trust-secrets, key: DB_USERNAME } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: trust-secrets, key: DB_PASSWORD } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: trust-secrets, key: JWT_SECRET } }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trust-service
+  namespace: peaceapp
+  labels: { app: trust-service, tier: backend }
+spec:
+  type: ClusterIP
+  selector: { app: trust-service }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
