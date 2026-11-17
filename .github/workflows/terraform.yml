@@ -1,0 +1,41 @@
+name: IaC validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: fmt, validate y escaneo de configuracion
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+      - name: terraform init (sin backend)
+        run: terraform init -backend=false -input=false
+      - name: terraform validate
+        run: terraform validate
+      - name: Trivy config (misconfiguraciones IaC, bloquea CRITICAL)
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:0.58.1 config \
+            --severity HIGH,CRITICAL --format table --output trivy-iac-report.txt .
+          cat trivy-iac-report.txt
+          docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:0.58.1 config \
+            --severity CRITICAL --ignorefile .trivyignore --exit-code 1 .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iac-validation
+          path: trivy-iac-report.txt
+          retention-days: 30

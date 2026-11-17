@@ -22,7 +22,7 @@ module "postgres" {
   source = "./modules/postgres"
 
   server_name            = var.postgres_server_name
-  location               = module.resource_group.location
+  location               = var.postgres_location
   resource_group_name    = module.resource_group.name
   administrator_login    = var.postgres_admin_login
   administrator_password = var.postgres_admin_password
