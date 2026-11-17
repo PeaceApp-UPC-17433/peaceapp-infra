@@ -32,7 +32,7 @@ jobs:
             --severity HIGH,CRITICAL --format table --output trivy-iac-report.txt .
           cat trivy-iac-report.txt
           docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:0.58.1 config \
-            --severity CRITICAL --exit-code 1 .
+            --severity CRITICAL --ignorefile .trivyignore --exit-code 1 .
       - uses: actions/upload-artifact@v4
         if: always()
         with:
