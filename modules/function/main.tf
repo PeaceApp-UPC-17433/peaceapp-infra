@@ -59,21 +59,31 @@ resource "azurerm_service_plan" "this" {
   location            = var.location
   resource_group_name = var.resource_group_name
   os_type             = "Linux"
-  sku_name            = "Y1"
+  sku_name            = "FC1"
   tags                = var.tags
 }
 
-resource "azurerm_linux_function_app" "this" {
+resource "azurerm_storage_container" "deploy" {
+  name                  = "app-package"
+  storage_account_id    = azurerm_storage_account.this.id
+  container_access_type = "private"
+}
+
+resource "azurerm_function_app_flex_consumption" "this" {
   name                = var.name
   location            = var.location
   resource_group_name = var.resource_group_name
   service_plan_id     = azurerm_service_plan.this.id
 
-  storage_account_name       = azurerm_storage_account.this.name
-  storage_account_access_key = azurerm_storage_account.this.primary_access_key
-  https_only                 = true
+  storage_container_type      = "blobContainer"
+  storage_container_endpoint  = "${azurerm_storage_account.this.primary_blob_endpoint}${azurerm_storage_container.deploy.name}"
+  storage_authentication_type = "StorageAccountConnectionString"
+  storage_access_key          = azurerm_storage_account.this.primary_access_key
 
-  ftp_publish_basic_authentication_enabled = false
+  runtime_name           = "python"
+  runtime_version        = "3.11"
+  maximum_instance_count = 40
+  instance_memory_in_mb  = 2048
 
   identity {
     type = "SystemAssigned"
@@ -81,12 +91,6 @@ resource "azurerm_linux_function_app" "this" {
 
   site_config {
     application_insights_connection_string = azurerm_application_insights.this.connection_string
-    minimum_tls_version                    = "1.2"
-    ftps_state                             = "Disabled"
-
-    application_stack {
-      python_version = "3.11"
-    }
   }
 
   app_settings = {
