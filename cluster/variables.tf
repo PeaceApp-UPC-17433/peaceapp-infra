@@ -5,12 +5,12 @@ variable "resource_group_name" {
 
 variable "aks_name" {
   type    = string
-  default = "aks-peaceapp"
+  default = "aks-peaceapp-v2"
 }
 
 variable "postgres_name" {
   type    = string
-  default = "peaceapp-pg-17433"
+  default = "peaceapp-pg-v2-17433"
 }
 
 variable "postgres_admin_login" {
@@ -45,4 +45,15 @@ variable "mapbox_access_token" {
   type      = string
   sensitive = true
   default   = ""
+}
+
+variable "ghcr_username" {
+  type    = string
+  default = ""
+}
+
+variable "ghcr_token" {
+  type      = string
+  default   = ""
+  sensitive = true
 }

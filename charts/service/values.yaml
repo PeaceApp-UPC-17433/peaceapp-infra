@@ -31,3 +31,5 @@ networkPolicy:
 metrics:
   enabled: true
   path: /actuator/prometheus
+imagePullSecrets:
+  - name: ghcr-pull

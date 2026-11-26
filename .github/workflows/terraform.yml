@@ -85,6 +85,8 @@ jobs:
       TF_VAR_tfstate_storage_account: ${{ vars.TFSTATE_SA }}
       TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
       TF_VAR_mapbox_access_token: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+      TF_VAR_ghcr_username: ${{ vars.GHCR_USERNAME }}
+      TF_VAR_ghcr_token: ${{ secrets.GHCR_TOKEN }}
     defaults:
       run:
         working-directory: ${{ matrix.layer.dir }}
