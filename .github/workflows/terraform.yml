@@ -53,7 +53,6 @@ jobs:
           path: trivy-iac-report.txt
           if-no-files-found: ignore
           retention-days: 30
-          if-no-files-found: ignore
 
   terraform:
     name: ${{ github.event_name == 'pull_request' && 'plan' || 'apply' }} ${{ matrix.layer.dir }}
