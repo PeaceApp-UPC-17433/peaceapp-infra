@@ -42,6 +42,10 @@ spec:
             - name: JAVA_TOOL_OPTIONS
               value: {{ .Values.javaOpts | quote }}
             {{- end }}
+            {{- with .Values.metrics.springApplicationJson }}
+            - name: SPRING_APPLICATION_JSON
+              value: {{ . | quote }}
+            {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
