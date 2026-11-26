@@ -1,0 +1,125 @@
+name: terraform
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.13.5
+      - run: terraform fmt -check -recursive
+      - name: Validate and test
+        run: |
+          for dir in infra cluster; do
+            (cd "$dir" && terraform init -backend=false -input=false >/dev/null && terraform validate)
+          done
+          for dir in modules/edge modules/postgres; do
+            (cd "$dir" && terraform init -backend=false -input=false >/dev/null && terraform test)
+          done
+      - uses: terraform-linters/setup-tflint@v6
+      - name: TFLint
+        run: |
+          tflint --init
+          tflint --recursive
+      - name: Trivy config, blocks HIGH and CRITICAL
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:0.76.2 config \
+            --severity HIGH,CRITICAL --ignorefile .trivyignore --exit-code 1 \
+            --format table --output trivy-iac-report.txt .
+      - name: Print report
+        if: always()
+        run: cat trivy-iac-report.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: iac-validation
+          path: trivy-iac-report.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+  terraform:
+    name: ${{ github.event_name == 'pull_request' && 'plan' || 'apply' }} ${{ matrix.layer.dir }}
+    needs: checks
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: ${{ github.event_name == 'pull_request' && matrix.layer.dir == 'cluster' }}
+    strategy:
+      max-parallel: 1
+      matrix:
+        layer:
+          - { dir: infra, key: prod }
+          - { dir: cluster, key: cluster }
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_USE_AZUREAD: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_budget_contact_email: ${{ vars.BUDGET_CONTACT_EMAIL }}
+      TF_VAR_ingress_ip: ${{ vars.INGRESS_IP }}
+      TF_VAR_letsencrypt_email: ${{ vars.BUDGET_CONTACT_EMAIL }}
+      TF_VAR_tfstate_resource_group: ${{ vars.TFSTATE_RG }}
+      TF_VAR_tfstate_storage_account: ${{ vars.TFSTATE_SA }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
+      TF_VAR_mapbox_access_token: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.layer.dir }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.13.5
+      - name: Init
+        run: |
+          terraform init -input=false \
+            -backend-config="resource_group_name=${{ vars.TFSTATE_RG }}" \
+            -backend-config="storage_account_name=${{ vars.TFSTATE_SA }}" \
+            -backend-config="key=${{ matrix.layer.key }}.tfstate"
+      - name: Plan
+        run: terraform plan -input=false -no-color -var-file=environments/prod.tfvars -out=tfplan | tee plan.txt
+      - name: Refuse destructive plans
+        if: github.event_name != 'pull_request'
+        env:
+          ALLOWED_DESTROY: ${{ vars.ALLOWED_DESTROY }}
+        run: |
+          terraform show -json tfplan > plan.json
+          python3 - <<'PY'
+          import json, os
+          allowed = set(filter(None, os.environ.get("ALLOWED_DESTROY", "").split(",")))
+          plan = json.load(open("plan.json"))
+          bad = [c["address"] for c in plan.get("resource_changes", [])
+                 if "delete" in c["change"]["actions"] and c["address"] not in allowed]
+          if bad:
+              raise SystemExit("destroy no permitido: " + ", ".join(bad))
+          PY
+      - name: Apply
+        if: github.event_name != 'pull_request'
+        run: terraform apply -input=false -auto-approve tfplan
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.layer.dir }}"
+            echo '```'
+            tail -n 60 plan.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

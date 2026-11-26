@@ -1,0 +1,18 @@
+name: api-gateway
+image:
+  repository: ghcr.io/peaceapp-upc-17433/api-gateway
+port: 8080
+secretRef: api-gateway-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq
+  IDENTITY_URL: http://identity-service:8081
+  INCIDENT_URL: http://incident-service:8082
+  TRUST_URL: http://trust-service:8083
+  ALERTS_URL: http://alerts-service:8084
+  COMMUNITY_URL: http://community-service:8085
+  MFA_REQUIRED_FOR_STAFF: "true"
+  CORS_ALLOWED_ORIGINS: https://peaceapp.angelanampa.dev
+ingress:
+  enabled: true
+  host: api.peaceapp.angelanampa.dev

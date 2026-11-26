@@ -1,37 +1,39 @@
-variable "server_name" {
-  description = "Nombre del Azure Database for PostgreSQL Flexible Server."
-  type        = string
+variable "name" {
+  type = string
 }
 
 variable "location" {
-  description = "Region de Azure."
-  type        = string
+  type = string
 }
 
 variable "resource_group_name" {
-  description = "Resource group donde se crea el servidor."
-  type        = string
+  type = string
 }
 
 variable "administrator_login" {
-  description = "Usuario administrador del servidor."
-  type        = string
+  type = string
 }
 
-variable "administrator_password" {
-  description = "Contrasena del administrador. Se pasa por TF_VAR_administrator_password, nunca se escribe en un archivo versionado."
-  type        = string
-  sensitive   = true
+variable "administrator_secret" {
+  type      = string
+  sensitive = true
 }
 
-variable "database_names" {
-  description = "Bases de datos a crear, una por microservicio (CA-02)."
-  type        = list(string)
-  default     = ["identity_db", "incident_db"]
+variable "databases" {
+  type = list(string)
+}
+
+variable "allow_azure_services" {
+  type    = bool
+  default = false
+}
+
+variable "allowed_ips" {
+  type    = list(string)
+  default = []
 }
 
 variable "tags" {
-  description = "Tags comunes aplicados al servidor."
-  type        = map(string)
-  default     = {}
+  type    = map(string)
+  default = {}
 }

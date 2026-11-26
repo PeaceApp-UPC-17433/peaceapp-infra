@@ -1,0 +1,8 @@
+name: alerts-service
+image:
+  repository: ghcr.io/peaceapp-upc-17433/alerts-service
+port: 8084
+secretRef: alerts-service-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq

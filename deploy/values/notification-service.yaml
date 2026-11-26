@@ -1,0 +1,10 @@
+name: notification-service
+image:
+  repository: ghcr.io/peaceapp-upc-17433/notification-service
+port: 8086
+secretRef: notification-service-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq
+  EMAIL_PROVIDER: resend
+  EMAIL_FROM: onboarding@resend.dev
