@@ -9,6 +9,10 @@ resource "azurerm_storage_account" "this" {
   https_traffic_only_enabled      = true
   tags                            = var.tags
 
+  identity {
+    type = "SystemAssigned"
+  }
+
   blob_properties {
     cors_rule {
       allowed_origins    = var.cors_origins
