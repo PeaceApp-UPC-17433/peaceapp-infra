@@ -1,0 +1,49 @@
+# Generador de carga para ver el HPA escalar. Cada login fallido calcula un hash bcrypt en identity-service.
+#   kubectl apply -f local/load-test.yaml      # empezar
+#   kubectl get hpa -n peaceapp -w             # mirar el escalado
+#   kubectl delete -f local/load-test.yaml     # parar (el HPA baja a 1 replica tras ~5 min)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: peaceapp
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: load-generator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: load-generator
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: load
+          image: busybox:1.37
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                wget -q -O /dev/null --header 'Content-Type: application/json' \
+                  --post-data '{"email":"carga@example.com","password":"Incorrecta-123"}' \
+                  http://api-gateway:8080/api/v1/auth/login 2>/dev/null
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+              ephemeral-storage: 8Mi
+            limits:
+              memory: 32Mi
+              ephemeral-storage: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]

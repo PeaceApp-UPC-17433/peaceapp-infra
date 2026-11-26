@@ -3,7 +3,15 @@ image:
   repository: ""
   tag: ""
 port: 8080
+# Se usa solo si autoscaling.enabled es false; con HPA las replicas las decide el HPA.
 replicas: 1
+# HPA por CPU (necesita metrics-server y resources.requests.cpu).
+# maxReplicas bajo a proposito: cada pod abre hasta 4 conexiones (Hikari) y la Postgres B1ms admite ~50.
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 70
 runAsUser: 100
 readOnlyRootFilesystem: true
 env: {}

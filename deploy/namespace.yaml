@@ -1,0 +1,9 @@
+# Namespace de la aplicacion. En AKS lo crea Terraform (cluster/main.tf, kubernetes_namespace_v1.app);
+# este manifiesto es el equivalente declarativo para un cluster local:
+#   kubectl apply -f deploy/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: peaceapp
+  labels:
+    app.kubernetes.io/part-of: peaceapp
