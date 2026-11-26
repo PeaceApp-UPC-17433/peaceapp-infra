@@ -31,5 +31,9 @@ networkPolicy:
 metrics:
   enabled: true
   path: /actuator/prometheus
+  # Seccion 4.3 (observabilidad): histograma de latencias HTTP con buckets alineados a los SLOs,
+  # necesario para las reglas peaceapp:sli_latency_500ms y peaceapp:http_latency_p95.
+  # Un servicio que no sea Spring Boot puede desactivarlo con metrics.springApplicationJson: "".
+  springApplicationJson: '{"management":{"metrics":{"distribution":{"percentiles-histogram":{"http.server.requests":true},"slo":{"http.server.requests":"100ms,250ms,500ms,1s"}}}}}'
 imagePullSecrets:
   - name: ghcr-pull
