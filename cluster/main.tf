@@ -223,7 +223,7 @@ resource "kubernetes_secret_v1" "db_admin" {
 
 resource "kubernetes_job_v1" "db_roles" {
   metadata {
-    name      = "db-roles-${substr(sha1(join(",", [for s in local.db_services : random_password.db[s].result])), 0, 6)}"
+    name      = "db-roles-${substr(sha1(join(",", concat(["schema-owner"], [for s in local.db_services : random_password.db[s].result]))), 0, 6)}"
     namespace = kubernetes_namespace_v1.app.metadata[0].name
   }
 
@@ -249,6 +249,9 @@ resource "kubernetes_job_v1" "db_roles" {
             SELECT format('ALTER ROLE %I PASSWORD %L', :'svc', :'pass') \gexec
             SELECT format('GRANT %I TO CURRENT_USER', :'svc') \gexec
             SELECT format('ALTER DATABASE %I OWNER TO %I', :'svc' || '_db', :'svc') \gexec
+            SQL
+              psql -v ON_ERROR_STOP=1 -v svc="$svc" --dbname "$svc"_db <<'SQL'
+            SELECT format('ALTER SCHEMA public OWNER TO %I', :'svc') \gexec
             SQL
             done
           SH
