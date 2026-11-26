@@ -4,7 +4,9 @@ metadata:
   name: {{ .Values.name }}
   labels: {{- include "service.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicas }}
+  {{- end }}
   selector:
     matchLabels: {{- include "service.selector" . | nindent 6 }}
   strategy:
@@ -14,8 +16,9 @@ spec:
   template:
     metadata:
       labels: {{- include "service.labels" . | nindent 8 }}
-      {{- if .Values.metrics.enabled }}
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- if .Values.metrics.enabled }}
         prometheus.io/scrape: "true"
         prometheus.io/path: {{ .Values.metrics.path }}
         prometheus.io/port: {{ .Values.port | quote }}
@@ -37,20 +40,15 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.port }}
-          env:
-            {{- if .Values.javaOpts }}
-            - name: JAVA_TOOL_OPTIONS
-              value: {{ .Values.javaOpts | quote }}
-            {{- end }}
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-          {{- if .Values.secretRef }}
+          # El ConfigMap va despues del Secret para que, si una clave se repite, gane el ConfigMap
+          # (antes el env en linea tenia prioridad sobre el Secret).
           envFrom:
+            {{- if .Values.secretRef }}
             - secretRef:
                 name: {{ .Values.secretRef }}
-          {{- end }}
+            {{- end }}
+            - configMapRef:
+                name: {{ .Values.name }}-config
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness }}
