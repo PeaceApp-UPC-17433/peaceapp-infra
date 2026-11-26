@@ -17,6 +17,12 @@ spec:
       labels:
         app.kubernetes.io/name: load-generator
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: load
           image: busybox:1.37
@@ -32,5 +38,12 @@ spec:
             requests:
               cpu: 10m
               memory: 16Mi
+              ephemeral-storage: 8Mi
             limits:
               memory: 32Mi
+              ephemeral-storage: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
