@@ -69,6 +69,12 @@ resource "azurerm_linux_function_app" "this" {
   storage_account_access_key = azurerm_storage_account.this.primary_access_key
   https_only                 = true
 
+  ftp_publish_basic_authentication_enabled = false
+
+  identity {
+    type = "SystemAssigned"
+  }
+
   site_config {
     application_insights_connection_string = azurerm_application_insights.this.connection_string
     minimum_tls_version                    = "1.2"

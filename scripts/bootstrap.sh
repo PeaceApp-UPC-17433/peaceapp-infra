@@ -9,12 +9,12 @@ IDENTITY="peaceapp-github"
 
 SUB_ID="$(az account show --query id -o tsv)"
 TENANT_ID="$(az account show --query tenantId -o tsv)"
-SUFFIX="$(printf '%s' "$SUB_ID" | shasum | cut -c1-8)"
+SUFFIX="$(printf '%s' "$SUB_ID" | shasum -a 256 | cut -c1-8)"
 TFSTATE_SA="stpeaceapptf${SUFFIX}"
 RG_ID="/subscriptions/${SUB_ID}/resourceGroups/${RG}"
 
 for ns in Microsoft.Storage Microsoft.ContainerService Microsoft.DBforPostgreSQL Microsoft.Web Microsoft.OperationalInsights Microsoft.Insights Microsoft.Consumption Microsoft.ManagedIdentity Microsoft.Network Microsoft.Compute; do
-  [ "$(az provider show -n "$ns" --query registrationState -o tsv)" = "Registered" ] || az provider register --namespace "$ns" --wait -o none
+  [[ "$(az provider show -n "$ns" --query registrationState -o tsv)" = "Registered" ]] || az provider register --namespace "$ns" --wait -o none
 done
 
 az storage account create -n "$TFSTATE_SA" -g "$RG" -l "$LOCATION" \

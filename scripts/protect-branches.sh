@@ -18,7 +18,7 @@ protect() {
   "allow_deletions": false
 }
 JSON
-  if [ $? -eq 0 ]; then echo "ok   $repo@$branch"; else echo "FALLA $repo@$branch (¿plan sin protección en repos privados?)"; fi
+  if [[ $? -eq 0 ]]; then echo "ok   $repo@$branch"; else echo "FALLA $repo@$branch (¿plan sin protección en repos privados?)"; fi
 }
 
 for repo in $SERVICES; do

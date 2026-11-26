@@ -39,8 +39,8 @@ set_secret SONAR_TOKEN "$SONAR_TOKEN"
 for name in TFSTATE_RG TFSTATE_SA BUDGET_CONTACT_EMAIL; do
   gh variable set "$name" --repo "$ORG/peaceapp-infra" --body "${!name}"
 done
-[ -z "${RESEND_API_KEY:-}" ] || gh secret set RESEND_API_KEY --repo "$ORG/peaceapp-infra" --body "$RESEND_API_KEY"
-[ -z "${MAPBOX_ACCESS_TOKEN:-}" ] || gh secret set MAPBOX_ACCESS_TOKEN --repo "$ORG/peaceapp-infra" --body "$MAPBOX_ACCESS_TOKEN"
+[[ -z "${RESEND_API_KEY:-}" ]] || gh secret set RESEND_API_KEY --repo "$ORG/peaceapp-infra" --body "$RESEND_API_KEY"
+[[ -z "${MAPBOX_ACCESS_TOKEN:-}" ]] || gh secret set MAPBOX_ACCESS_TOKEN --repo "$ORG/peaceapp-infra" --body "$MAPBOX_ACCESS_TOKEN"
 gh variable set FUNCTION_APP_NAME --repo "$ORG/media-sanitizer-fn" --body "func-peaceapp-prod-media"
 
 for repo in $ALL_REPOS; do
