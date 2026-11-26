@@ -4,6 +4,13 @@ image:
   tag: ""
 port: 8080
 replicas: 1
+# HPA por CPU (templates/hpa.yaml). Apagado por defecto: solo los servicios que lo declaran escalan.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  scaleDownStabilizationSeconds: 60
 runAsUser: 100
 readOnlyRootFilesystem: true
 env: {}

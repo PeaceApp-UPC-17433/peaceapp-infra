@@ -4,7 +4,10 @@ metadata:
   name: {{ .Values.name }}
   labels: {{- include "service.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
+  # Con HPA activo el número de réplicas lo decide el HPA; si helm lo fijara, cada upgrade lo pisaría.
   replicas: {{ .Values.replicas }}
+  {{- end }}
   selector:
     matchLabels: {{- include "service.selector" . | nindent 6 }}
   strategy:
