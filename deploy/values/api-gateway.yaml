@@ -16,3 +16,5 @@ env:
 ingress:
   enabled: true
   host: api.peaceapp.angelanampa.dev
+autoscaling:
+  maxReplicas: 3 # sin base de datos: no consume conexiones de Postgres

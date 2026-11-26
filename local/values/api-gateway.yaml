@@ -1,0 +1,4 @@
+env:
+  CORS_ALLOWED_ORIGINS: https://peaceapp.localtest.me
+ingress:
+  host: api.peaceapp.localtest.me

@@ -1,0 +1,6 @@
+# Se aplica encima de deploy/values/<servicio>.yaml en el cluster local.
+image:
+  tag: local
+imagePullSecrets: []
+env:
+  SPRING_PROFILES_ACTIVE: local

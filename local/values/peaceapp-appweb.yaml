@@ -1,0 +1,4 @@
+env:
+  SPRING_PROFILES_ACTIVE: null
+ingress:
+  host: peaceapp.localtest.me

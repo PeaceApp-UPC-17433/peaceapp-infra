@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PeaceApp · Despliegue en Kubernetes",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1320,
+      720
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "navegador",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        120,
+        60
+      ]
+    },
+    {
+      "id": "ingress",
+      "type": "cloud",
+      "label": "ingress-nginx",
+      "sublabel": "TLS cert-manager",
+      "pos": [
+        230,
+        300
+      ],
+      "size": [
+        140,
+        60
+      ],
+      "tag": "Ingress x2"
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "peaceapp-appweb",
+      "sublabel": "nginx :8080 · HPA 1-3",
+      "pos": [
+        440,
+        300
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "api-gateway",
+      "sublabel": "JWT :8080 · HPA 1-3",
+      "pos": [
+        670,
+        300
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "identity",
+      "type": "backend",
+      "label": "identity-service",
+      "sublabel": ":8081 · HPA 1-2",
+      "pos": [
+        900,
+        60
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "incident",
+      "type": "backend",
+      "label": "incident-service",
+      "sublabel": ":8082 · HPA 1-2",
+      "pos": [
+        900,
+        160
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "trust",
+      "type": "backend",
+      "label": "trust-service",
+      "sublabel": ":8083 · HPA 1-2",
+      "pos": [
+        900,
+        260
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "alerts",
+      "type": "backend",
+      "label": "alerts-service",
+      "sublabel": ":8084 · HPA 1-2",
+      "pos": [
+        900,
+        360
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "community",
+      "type": "backend",
+      "label": "community-service",
+      "sublabel": ":8085 · HPA 1-2",
+      "pos": [
+        900,
+        460
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "notification",
+      "type": "backend",
+      "label": "notification-service",
+      "sublabel": ":8086 · HPA 1-2",
+      "pos": [
+        900,
+        600
+      ],
+      "size": [
+        160,
+        56
+      ]
+    },
+    {
+      "id": "rabbit",
+      "type": "messagebus",
+      "label": "RabbitMQ",
+      "sublabel": "StatefulSet · PVC 2Gi",
+      "pos": [
+        670,
+        600
+      ],
+      "size": [
+        150,
+        60
+      ],
+      "tag": "peaceapp.events"
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Azure Flexible Server",
+      "pos": [
+        1150,
+        300
+      ],
+      "size": [
+        140,
+        60
+      ],
+      "tag": "1 BD por servicio"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Namespace peaceapp",
+      "wraps": [
+        "web",
+        "gateway",
+        "identity",
+        "incident",
+        "trust",
+        "alerts",
+        "community",
+        "notification",
+        "rabbit"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "c-user-ingress",
+      "from": "user",
+      "to": "ingress",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-ingress-web",
+      "from": "ingress",
+      "to": "web",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-web-gw",
+      "from": "web",
+      "to": "gateway",
+      "label": "/api",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-gw-identity",
+      "from": "gateway",
+      "to": "identity"
+    },
+    {
+      "id": "c-gw-incident",
+      "from": "gateway",
+      "to": "incident"
+    },
+    {
+      "id": "c-gw-trust",
+      "from": "gateway",
+      "to": "trust"
+    },
+    {
+      "id": "c-gw-alerts",
+      "from": "gateway",
+      "to": "alerts"
+    },
+    {
+      "id": "c-gw-community",
+      "from": "gateway",
+      "to": "community"
+    },
+    {
+      "id": "c-identity-db",
+      "from": "identity",
+      "to": "postgres"
+    },
+    {
+      "id": "c-incident-db",
+      "from": "incident",
+      "to": "postgres"
+    },
+    {
+      "id": "c-trust-db",
+      "from": "trust",
+      "to": "postgres",
+      "label": "JDBC",
+      "labelAt": [
+        1083,
+        274
+      ]
+    },
+    {
+      "id": "c-alerts-db",
+      "from": "alerts",
+      "to": "postgres"
+    },
+    {
+      "id": "c-community-db",
+      "from": "community",
+      "to": "postgres"
+    },
+    {
+      "id": "c-rabbit-notification",
+      "from": "rabbit",
+      "to": "notification",
+      "label": "eventos",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-community-rabbit",
+      "from": "community",
+      "to": "rabbit",
+      "label": "outbox",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Recursos por servicio (chart charts/service)",
+      "items": [
+        "Deployment con probes liveness, readiness y startup",
+        "Service ClusterIP y NetworkPolicy",
+        "ConfigMap <svc>-config y Secret <svc>-env (envFrom)",
+        "requests/limits de CPU y memoria"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Autoescalado",
+      "items": [
+        "HPA autoscaling/v2 por CPU al 70%",
+        "metrics-server alimenta las métricas",
+        "máx. 2 réplicas con BD (pool de 4 conexiones)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Entrega",
+      "items": [
+        "Imágenes en GHCR (imagePullSecret ghcr-pull)",
+        "GitHub Actions: helm upgrade --install --atomic",
+        "Prometheus y Grafana en el namespace monitoring"
+      ]
+    }
+  ]
+}
