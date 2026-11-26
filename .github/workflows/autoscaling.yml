@@ -1,0 +1,125 @@
+name: autoscaling-test
+
+# Prueba de autoescalado en AKS (4.4.3 del informe). Solo manual y solo desde main:
+# la credencial federada de Azure de este repo es por "ref:refs/heads/main" (scripts/bootstrap.sh), por eso el
+# job NO declara `environment:` (cambiaría el subject del token OIDC).
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: Duración total en minutos (máximo 15)
+        default: "10"
+      peak_vus:
+        description: Usuarios virtuales en la meseta (máximo 50)
+        default: "40"
+
+permissions: {}
+
+concurrency:
+  group: autoscaling-test
+  cancel-in-progress: false
+
+env:
+  NAMESPACE: peaceapp
+  AKS_NAME: aks-peaceapp-v2
+  RESOURCE_GROUP: rg-peaceapp
+  K6_IMAGE: grafana/k6:1.3.0
+  SERVICES: api-gateway incident-service
+
+jobs:
+  autoscaling:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: azure/aks-set-context@883bdc8d8d1d0fd87e66cc4ba6f0b618f9eb5281 # v5
+        with:
+          cluster-name: ${{ env.AKS_NAME }}
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          admin: "true"
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5
+
+      - name: Aplicar el HPA con la imagen que ya corre
+        run: |
+          for svc in $SERVICES; do
+            image="$(kubectl -n "$NAMESPACE" get deploy "$svc" -o jsonpath='{.spec.template.spec.containers[0].image}')"
+            tag="${image##*:}"
+            echo "$svc -> $tag"
+            helm upgrade --install "$svc" charts/service -n "$NAMESPACE" -f "deploy/values/$svc.yaml" \
+              --set image.tag="$tag" --atomic --timeout 5m
+          done
+          kubectl -n "$NAMESPACE" get hpa
+          # Sin metrics-server el HPA no ve la CPU: se falla antes de cargar producción en vano.
+          kubectl -n "$NAMESPACE" top pods
+
+      - name: Estado inicial
+        run: |
+          mkdir -p out
+          kubectl -n "$NAMESPACE" get deploy,hpa,pods -o wide > out/before.txt
+          kubectl top nodes >> out/before.txt
+
+      - name: Carga con k6 y muestreo del HPA
+        env:
+          QA_EMAIL: ${{ secrets.QA_EMAIL }}
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+          DURATION_MINUTES: ${{ inputs.duration_minutes }}
+          PEAK_VUS: ${{ inputs.peak_vus }}
+        run: |
+          echo "epoch,hpa,current_cpu,target_cpu,current_replicas,desired_replicas" > out/hpa.csv
+          (
+            while true; do
+              kubectl -n "$NAMESPACE" get hpa -o json | jq -r --arg t "$(date +%s)" '.items[] |
+                [$t, .metadata.name,
+                 ((.status.currentMetrics // [])[0].resource.current.averageUtilization // ""),
+                 .spec.metrics[0].resource.target.averageUtilization,
+                 .status.currentReplicas, .status.desiredReplicas] | @csv' | tr -d '"' >> out/hpa.csv
+              kubectl -n "$NAMESPACE" top pods --no-headers 2>/dev/null | sed "s/^/$(date +%s) /" >> out/top-pods.txt || true
+              sleep 10
+            done
+          ) &
+          echo $! > sampler.pid
+          docker run --rm -v "$PWD/tests/autoscaling:/scripts:ro" -v "$PWD/out:/out" \
+            -e QA_EMAIL -e QA_PASSWORD -e DURATION_MINUTES -e PEAK_VUS \
+            "$K6_IMAGE" run --quiet --summary-export /out/k6-summary.json --out json=/out/k6-points.json \
+            /scripts/autoscaling.js | tee out/k6-console.txt
+
+      - name: Esperar el desescalado
+        if: always()
+        run: |
+          # stabilizationWindowSeconds=60 y 1 pod cada 30 s: 3 minutos alcanzan para volver a 1 réplica.
+          sleep 180
+          kill "$(cat sampler.pid)" 2>/dev/null || true
+          kubectl -n "$NAMESPACE" get deploy,hpa,pods -o wide > out/after.txt
+          kubectl -n "$NAMESPACE" get events --field-selector reason=SuccessfulRescale --sort-by=.lastTimestamp > out/rescale-events.txt || true
+
+      - name: Gráfica y resumen
+        if: always()
+        run: |
+          # Ubuntu 24.04 marca el Python del sistema como "externally managed": se usa un venv.
+          python3 -m venv .venv && .venv/bin/pip install --quiet matplotlib==3.10.7
+          .venv/bin/python tests/autoscaling/plot.py out/k6-points.json out/hpa.csv out/autoscaling.png out/hpa-summary.md
+          {
+            echo "### Autoescalado (HPA)"
+            cat out/hpa-summary.md
+            echo
+            echo "### Eventos de escalado"
+            echo '```'; cat out/rescale-events.txt; echo '```'
+            echo "### k6"
+            echo '```'; tail -30 out/k6-console.txt; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: autoscaling
+          path: out/
+          retention-days: 30

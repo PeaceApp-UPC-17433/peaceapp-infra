@@ -6,3 +6,11 @@ secretRef: incident-service-env
 env:
   SPRING_PROFILES_ACTIVE: prod
   RABBIT_HOST: rabbitmq
+# Escala con la carga: el gateway recibe todo el tráfico e incident atiende mapa, listado y heatmap.
+# Máximo 3 réplicas: entra en los 2 nodos B2as_v2 junto al resto (requests de 100m CPU / 384Mi).
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  scaleDownStabilizationSeconds: 60
