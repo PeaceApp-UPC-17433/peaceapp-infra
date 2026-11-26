@@ -23,7 +23,7 @@ data "terraform_remote_state" "infra" {
 locals {
   evidence_account        = data.terraform_remote_state.infra.outputs.evidence_storage_account
   postgres_admin_password = data.terraform_remote_state.infra.outputs.postgres_admin_password
-  kube                    = data.azurerm_kubernetes_cluster.this.kube_admin_config[0]
+  kube                    = data.azurerm_kubernetes_cluster.this.kube_config[0]
 
   db_services = ["identity", "incident", "trust", "alerts", "community", "notification"]
   db_url      = { for s in local.db_services : s => "jdbc:postgresql://${data.azurerm_postgresql_flexible_server.this.fqdn}:5432/${s}_db?sslmode=require" }
