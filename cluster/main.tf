@@ -33,7 +33,10 @@ locals {
       JWT_SECRET = random_password.jwt.result
       OTP_SECRET = random_password.otp.result
     }
-    incident-service  = {}
+    incident-service = local.evidence_account == "" ? {} : {
+      EVIDENCE_STORAGE_ACCOUNT = local.evidence_account
+      EVIDENCE_STORAGE_KEY     = data.azurerm_storage_account.evidence[0].primary_access_key
+    }
     trust-service     = {}
     alerts-service    = {}
     community-service = {}
