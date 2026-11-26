@@ -1,0 +1,3 @@
+# Ambiente de desarrollo: igual que producción pero sin Ingress público (el chart ya trae HPA 1-2 por defecto).
+ingress:
+  enabled: false

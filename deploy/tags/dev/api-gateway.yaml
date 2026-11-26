@@ -1,0 +1,3 @@
+# Versión de imagen desplegada en dev. La actualiza el pipeline (dev) o la promoción por PR (prod).
+image:
+  tag: "0.4.0"

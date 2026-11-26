@@ -1,0 +1,3 @@
+# Producción usa los valores por defecto del chart (HPA 1-2, ver charts/service/values.yaml).
+# Aquí solo irían diferencias propias de prod.
+{}

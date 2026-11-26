@@ -1,0 +1,4 @@
+# Solo para el clúster local kind (evidencias del Capítulo IV). Imagen construida en local, sin registry privado.
+imagePullSecrets: []
+image:
+  repository: peaceapp/trust-service

@@ -1,0 +1,48 @@
+# Argo CD en el AKS (aks-peaceapp-v2): una Application por servicio, SOLO produccion.
+# El ambiente dev no se despliega en este cluster (2 nodos B2as_v2, ~86 % de memoria en uno de ellos).
+# Sincronizacion MANUAL: Argo CD compara y muestra diferencias, pero no cambia nada hasta pedirlo
+# (argocd app sync / boton Sync). Cuando el equipo lo decida, se activa `automated`.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: peaceapp-aks
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - { service: identity-service }
+          - { service: incident-service }
+          - { service: trust-service }
+          - { service: api-gateway }
+          - { service: alerts-service }
+          - { service: community-service }
+          - { service: notification-service }
+          - { service: peaceapp-appweb }
+  template:
+    metadata:
+      name: '{{.service}}-prod'
+      labels:
+        app.kubernetes.io/part-of: peaceapp
+        environment: prod
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/PeaceApp-UPC-17433/peaceapp-infra.git
+        targetRevision: main
+        path: charts/service
+        helm:
+          releaseName: '{{.service}}'
+          ignoreMissingValueFiles: true
+          valueFiles:
+            - '../../deploy/values/{{.service}}.yaml'
+            - '../../deploy/environments/prod.yaml'
+            - '../../deploy/tags/prod/{{.service}}.yaml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: peaceapp
+      syncPolicy:
+        syncOptions:
+          - ApplyOutOfSyncOnly=true

@@ -1,0 +1,18 @@
+# Argo CD para el AKS (aks-peaceapp-v2): ligero, sin exposicion publica y fijado al nodo con mas holgura.
+global:
+  nodeSelector:
+    kubernetes.io/hostname: aks-nodepool1-24068222-vmss000003
+dex: { enabled: false }
+notifications: { enabled: false }
+applicationSet: { enabled: true }
+server:
+  service: { type: ClusterIP }
+  resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 256Mi } }
+repoServer:
+  resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 384Mi } }
+controller:
+  resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { memory: 512Mi } }
+redis:
+  resources: { requests: { cpu: 20m, memory: 32Mi }, limits: { memory: 128Mi } }
+applicationSet:
+  resources: { requests: { cpu: 20m, memory: 64Mi }, limits: { memory: 128Mi } }

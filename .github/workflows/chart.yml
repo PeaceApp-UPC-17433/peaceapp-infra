@@ -1,0 +1,53 @@
+name: chart
+
+# Valida el chart de servicios y la configuración GitOps antes de que Argo CD la despliegue:
+# helm lint y render de cada servicio en cada ambiente (dev y prod), con sus valores y su tag de imagen.
+on:
+  pull_request:
+    branches: [main, develop]
+    paths: ["charts/**", "deploy/**", "gitops/**", ".github/workflows/chart.yml"]
+  push:
+    branches: [main]
+    paths: ["charts/**", "deploy/**", "gitops/**", ".github/workflows/chart.yml"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: chart-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5
+      - name: Lint y render de cada servicio y ambiente
+        run: |
+          set -euo pipefail
+          count=0
+          for values in deploy/values/*.yaml; do
+            svc="$(basename "$values" .yaml)"
+            for env in dev prod; do
+              tag="deploy/tags/$env/$svc.yaml"
+              [ -f "$tag" ] || { echo "::error::Falta $tag"; exit 1; }
+              args=(-f "$values" -f "deploy/environments/$env.yaml" -f "$tag")
+              helm lint charts/service "${args[@]}" >/dev/null
+              helm template "$svc" charts/service "${args[@]}" >/dev/null
+              count=$((count + 1))
+            done
+          done
+          echo "Servicios y ambientes validados: $count" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: El HPA y el ConfigMap existen y el Deployment no fija réplicas
+        run: |
+          set -euo pipefail
+          out="$(helm template trust-service charts/service -f deploy/values/trust-service.yaml -f deploy/tags/prod/trust-service.yaml)"
+          grep -q 'kind: HorizontalPodAutoscaler' <<<"$out"
+          grep -q 'kind: ConfigMap' <<<"$out"
+          if awk '/kind: Deployment/{d=1} d&&/^  replicas:/{found=1} END{exit !found}' <<<"$out"; then
+            echo "::error::El Deployment fija replicas aunque el HPA esta activo"; exit 1
+          fi

@@ -1,0 +1,58 @@
+# GitOps con Argo CD: una Application por servicio y por ambiente (dev -> namespace peaceapp-dev, prod -> peaceapp).
+# La verdad vive en Git: cambiar deploy/tags/<env>/<servicio>.yaml (por PR) despliega esa versión; revertir el commit hace rollback.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: peaceapp
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - { env: dev, namespace: peaceapp-dev }
+                - { env: prod, namespace: peaceapp }
+          - list:
+              elements:
+                - { service: identity-service }
+                - { service: incident-service }
+                - { service: trust-service }
+                - { service: api-gateway }
+                - { service: alerts-service }
+                - { service: community-service }
+                - { service: notification-service }
+                - { service: peaceapp-appweb }
+  template:
+    metadata:
+      name: '{{.service}}-{{.env}}'
+      labels:
+        app.kubernetes.io/part-of: peaceapp
+        environment: '{{.env}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/PeaceApp-UPC-17433/peaceapp-infra.git
+        targetRevision: main
+        path: charts/service
+        helm:
+          releaseName: '{{.service}}'
+          ignoreMissingValueFiles: true
+          valueFiles:
+            - '../../deploy/values/{{.service}}.yaml'
+            - '../../deploy/environments/{{.env}}.yaml'
+            - '../../deploy/tags/{{.env}}/{{.service}}.yaml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 3
+          backoff: { duration: 10s, factor: 2, maxDuration: 2m }
