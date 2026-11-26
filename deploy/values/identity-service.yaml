@@ -1,0 +1,10 @@
+name: identity-service
+image:
+  repository: ghcr.io/peaceapp-upc-17433/identity-service
+port: 8081
+secretRef: identity-service-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq
+  WEB_BASE_URL: https://peaceapp.angelanampa.dev
+  MFA_REQUIRED_FOR_STAFF: "true"

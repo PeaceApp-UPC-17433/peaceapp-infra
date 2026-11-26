@@ -1,0 +1,8 @@
+name: trust-service
+image:
+  repository: ghcr.io/peaceapp-upc-17433/trust-service
+port: 8083
+secretRef: trust-service-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq

@@ -1,0 +1,25 @@
+name: peaceapp-appweb
+image:
+  repository: ghcr.io/peaceapp-upc-17433/peaceapp-appweb
+port: 8080
+runAsUser: 101
+readOnlyRootFilesystem: false
+secretRef: peaceapp-appweb-env
+env:
+  API_UPSTREAM: http://api-gateway:8080
+  API_URL: /api/v1
+javaOpts: ""
+metrics:
+  enabled: false
+probes:
+  liveness: /healthz
+  readiness: /healthz
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+ingress:
+  enabled: true
+  host: peaceapp.angelanampa.dev

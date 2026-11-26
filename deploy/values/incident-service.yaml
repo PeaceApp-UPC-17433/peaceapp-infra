@@ -1,0 +1,8 @@
+name: incident-service
+image:
+  repository: ghcr.io/peaceapp-upc-17433/incident-service
+port: 8082
+secretRef: incident-service-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq

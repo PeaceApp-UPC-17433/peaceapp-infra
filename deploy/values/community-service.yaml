@@ -1,0 +1,9 @@
+name: community-service
+image:
+  repository: ghcr.io/peaceapp-upc-17433/community-service
+port: 8085
+secretRef: community-service-env
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  RABBIT_HOST: rabbitmq
+  CONFIRMATION_THRESHOLD: "3"

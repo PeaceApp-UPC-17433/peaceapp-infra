@@ -1,0 +1,33 @@
+name: ""
+image:
+  repository: ""
+  tag: ""
+port: 8080
+replicas: 1
+runAsUser: 100
+readOnlyRootFilesystem: true
+env: {}
+secretRef: ""
+javaOpts: "-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+probes:
+  liveness: /actuator/health/liveness
+  readiness: /actuator/health/readiness
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+    ephemeral-storage: 64Mi
+  limits:
+    memory: 512Mi
+    ephemeral-storage: 256Mi
+ingress:
+  enabled: false
+  host: ""
+  className: nginx
+  issuer: letsencrypt
+networkPolicy:
+  ingressControllerNamespace: ingress-nginx
+  monitoringNamespace: monitoring
+metrics:
+  enabled: true
+  path: /actuator/prometheus
