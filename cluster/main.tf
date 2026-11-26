@@ -131,6 +131,9 @@ resource "kubernetes_secret_v1" "service" {
       DB_URL      = local.db_url[trimsuffix(each.key, "-service")]
       DB_USERNAME = trimsuffix(each.key, "-service")
       DB_PASSWORD = random_password.db[trimsuffix(each.key, "-service")].result
+
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE = "4"
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE      = "1"
     } : {},
     each.value
   )
