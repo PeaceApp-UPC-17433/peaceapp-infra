@@ -41,6 +41,33 @@ variable "resend_api_key" {
   default   = ""
 }
 
+variable "admin_email" {
+  description = "Correo del administrador inicial. Debe poder recibir mensajes (restablecer contrasena, avisos)."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.admin_email == "" || can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.admin_email))
+    error_message = "admin_email debe ser un correo valido."
+  }
+}
+
+variable "admin_password" {
+  description = "Contrasena del administrador inicial. Solo se usa si no existe ningun administrador."
+  type        = string
+  sensitive   = true
+  default     = ""
+
+  validation {
+    # RE2 no admite lookahead: cada requisito se comprueba por separado.
+    condition = var.admin_password == "" || (
+      length(var.admin_password) >= 12 && length(var.admin_password) <= 72 &&
+      can(regex("[a-z]", var.admin_password)) && can(regex("[A-Z]", var.admin_password)) && can(regex("[0-9]", var.admin_password))
+    )
+    error_message = "admin_password: de 12 a 72 caracteres, con mayuscula, minuscula y numero."
+  }
+}
+
 variable "mapbox_access_token" {
   type      = string
   sensitive = true

@@ -29,10 +29,17 @@ locals {
   db_url      = { for s in local.db_services : s => "jdbc:postgresql://${data.azurerm_postgresql_flexible_server.this.fqdn}:5432/${s}_db?sslmode=require" }
 
   secrets = {
-    identity-service = {
-      JWT_SECRET = random_password.jwt.result
-      OTP_SECRET = random_password.otp.result
-    }
+    identity-service = merge(
+      {
+        JWT_SECRET = random_password.jwt.result
+        OTP_SECRET = random_password.otp.result
+      },
+      # Administrador inicial: identity-service lo crea al arrancar solo si aun no existe ninguno.
+      var.admin_email != "" && var.admin_password != "" ? {
+        ADMIN_EMAIL    = var.admin_email
+        ADMIN_PASSWORD = var.admin_password
+      } : {}
+    )
     incident-service = local.evidence_account == "" ? {} : {
       EVIDENCE_STORAGE_ACCOUNT = local.evidence_account
       EVIDENCE_STORAGE_KEY     = data.azurerm_storage_account.evidence[0].primary_access_key
